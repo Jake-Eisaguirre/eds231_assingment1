@@ -1,0 +1,195 @@
+---
+title: "assignment_1"
+author: "Jake Eisaguirre"
+date: "4/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(jsonlite) #convert results from API queries into R-friendly formats 
+library(tidyverse) 
+library(tidytext) #text data management and analysis
+library(ggplot2) #plot word frequencies and publication dates
+```
+
+```{r}
+term <- "aquaculture" # Need to use + to string together separate words
+begin_date <- "20160101"
+end_date <- "20220410"
+
+#construct the query url using API operators
+baseurl <- paste0("http://api.nytimes.com/svc/search/v2/articlesearch.json?q=",term,
+                  "&begin_date=",begin_date,"&end_date=",end_date,
+                  "&facet_filter=true&api-key=","lpAu2yizgztIYq7D4L1kHXzrzotPyOoV", sep="")
+```
+
+
+# response docs.lead.paragraph
+
+```{r}
+#examine our query url
+baseurl
+#this code allows for obtaining multiple pages of query results 
+initialQuery <- fromJSON(baseurl)
+maxPages <- round((initialQuery$response$meta$hits[1] / 10)-1) 
+
+pages <- list()
+for(i in 0:maxPages){
+  nytSearch <- fromJSON(paste0(baseurl, "&page=", i), flatten = TRUE) %>% data.frame() 
+  message("Retrieving page ", i)
+  pages[[i+1]] <- nytSearch 
+  Sys.sleep(6) 
+}
+
+class(nytSearch)
+
+rbind(pages) 
+```
+
+```{r}
+nytSearch %>% 
+  group_by(response.docs.type_of_material) %>%
+  summarize(count=n()) %>%
+  mutate(percent = (count / sum(count))*100) %>%
+  ggplot() +
+  geom_bar(aes(y=percent, x=response.docs.type_of_material, fill=response.docs.type_of_material), stat = "identity") + coord_flip()
+
+```
+
+
+```{r}
+nytSearch %>%
+  mutate(pubDay=gsub("T.*","",response.docs.pub_date)) %>%
+  group_by(pubDay) %>%
+  summarise(count=n()) %>%
+  filter(count >= 1) %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(pubDay, count), y=count), stat="identity") + coord_flip()
+
+names(nytSearch)
+```
+
+
+```{r}
+paragraph <- names(nytSearch)[6]#The 6th column, "response.doc.lead_paragraph", is the one we want here.  
+
+tokenized <- nytSearch %>%
+  unnest_tokens(word, paragraph)
+
+tokenized %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 1) %>% #illegible with all the words displayed
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+```{r}
+data(stop_words)
+
+tokenized <- tokenized %>%
+  anti_join(stop_words)
+
+tokenized %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 1) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+```{r}
+tokenized$word
+
+clean_tokens <- str_remove_all(tokenized$word, "[:digit:]")
+clean_tokens <- str_replace_all(clean_tokens, "land[a-z, A-Z]*", "land")
+clean_tokens <- gsub("'s", "", clean_tokens)
+
+tokenized$clean <- clean_tokens
+```
+
+```{r}
+tokenized %>%
+  count(clean, sort = TRUE) %>%
+  filter(n > 1) %>% #illegible with all the words displayed
+  mutate(clean = reorder(clean, n)) %>%
+  ggplot(aes(n, clean)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+
+# response.docs.headline.main
+
+```{r}
+
+nytSearch %>%
+  mutate(pubDay=gsub("T.*","",response.docs.pub_date)) %>%
+  group_by(pubDay) %>%
+  summarise(count=n()) %>%
+  filter(count >= 1) %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(pubDay, count), y=count), stat="identity") + coord_flip()
+
+names(nytSearch)
+```
+
+
+```{r}
+title <- names(nytSearch)[21]
+
+tokenized <- nytSearch %>%
+  unnest_tokens(word, title)
+
+tokenized %>%
+  count(word, sort = TRUE) %>%
+  #filter(n > 5) %>% #illegible with all the words displayed
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+```{r}
+data(stop_words)
+
+tokenized <- tokenized %>%
+  anti_join(stop_words)
+
+tokenized %>%
+  count(word, sort = TRUE) %>%
+  #filter(n > 1) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+```{r}
+tokenized$word
+
+clean_tokens <- str_remove_all(tokenized$word, "[:digit:]")
+clean_tokens <- str_replace_all(clean_tokens, "land[a-z, A-Z]*", "land")
+clean_tokens <- gsub("'s", "", clean_tokens)
+
+tokenized$clean <- clean_tokens
+```
+
+```{r}
+tokenized %>%
+  count(clean, sort = TRUE) %>%
+  #filter(n > 1) %>% #illegible with all the words displayed
+  mutate(clean = reorder(clean, n)) %>%
+  ggplot(aes(n, clean)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+```
+
