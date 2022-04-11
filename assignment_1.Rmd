@@ -60,13 +60,14 @@ nytSearch %>%
 
 ```
 
+# response.docs.pub_date
 
 ```{r}
 nytSearch %>%
   mutate(pubDay=gsub("T.*","",response.docs.pub_date)) %>%
   group_by(pubDay) %>%
   summarise(count=n()) %>%
-  filter(count >= 1) %>%
+  #filter(count >= 1) %>%
   ggplot() +
   geom_bar(aes(x=reorder(pubDay, count), y=count), stat="identity") + coord_flip()
 
@@ -108,8 +109,10 @@ tokenized %>%
 tokenized$word
 
 clean_tokens <- str_remove_all(tokenized$word, "[:digit:]")
-clean_tokens <- str_replace_all(clean_tokens, "land[a-z, A-Z]*", "land")
+
 clean_tokens <- gsub("'s", "", clean_tokens)
+
+clean_tokens <- gsub("[^A-z]s", "", clean_tokens) 
 
 tokenized$clean <- clean_tokens
 ```
@@ -175,8 +178,10 @@ tokenized %>%
 tokenized$word
 
 clean_tokens <- str_remove_all(tokenized$word, "[:digit:]")
-clean_tokens <- str_replace_all(clean_tokens, "land[a-z, A-Z]*", "land")
+
 clean_tokens <- gsub("'s", "", clean_tokens)
+
+clean_tokens <- gsub("[^A-z]s", "", clean_tokens) 
 
 tokenized$clean <- clean_tokens
 ```
@@ -191,5 +196,5 @@ tokenized %>%
   labs(y = NULL)
 ```
 
-```
+### Response: There does seem to be a difference between the headline and lead paragraph. The words are similiar yet when I read through the headline word frequency I see more terms associated to aquaculture. This makes sense since the headline will more then likely have terms associated to the topic, that being aquaculture. While there could be a lead paragraph that has aquaculture in the paragraph yet starts off discussing other topics. I was also very surpised at the lack of publications about aquaculutre during the 4 year period I chose. I would have thought there would be many publications. 
 
